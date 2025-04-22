@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"mcp": {
+			"servers": {
+				"gcs": {
+					"command": "docker",
+					"args": [
+						"run",
+						"-i",
+						"--rm",
+						"gcs"
+					]
+				}
+			}
+		}
+	}
+}

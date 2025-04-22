@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "gcs-mcp-server": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "/workspaces/gcs-mcp-server/src/server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "/workspaces/gcs-mcp-server/src"
+      }
+    }
+  }
+}
