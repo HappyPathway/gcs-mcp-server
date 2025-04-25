@@ -1,212 +1,166 @@
-# Creating VS Code MCP Servers
+# Google Cloud Storage MCP Server Guide
 
 ## Overview
 
-This guide details how to create a Model Context Protocol (MCP) server that integrates with Visual Studio Code. This template repository provides a foundation for building MCP servers that can be used by VS Code to extend AI capabilities through custom tools and services.
+This MCP server provides tools for interacting with Google Cloud Storage (GCS) through VS Code's Copilot Chat. Built on the template-mcp-server foundation, it follows best practices for MCP server implementation while providing secure access to GCS operations.
+
+## Features
+
+- List buckets and objects
+- Read and write object content
+- Copy and delete objects
+- Manage bucket lifecycle
+- Support for object versioning
+- Uses Application Default Credentials for authentication
 
 ## Prerequisites
 
 1. Python 3.8 or higher
-2. Visual Studio Code
-3. Basic understanding of the VS Code extension model
+2. Visual Studio Code with MCP extension
+3. Google Cloud Project with Storage enabled
+4. Google Cloud CLI installed and configured (`gcloud`)
 
-## Setting Up Your Development Environment
+## Installation
 
-### 1. Getting Started with the Template
+### 1. Local Setup
 
-1. Create a new repository using this template:
-   - Click "Use this template" on GitHub
-   - Or clone and reinitialize:
+1. Clone and set up the environment:
    ```bash
-   git clone https://github.com/your-org/mcp-server-template
-   cd mcp-server-template
-   ```
-
-2. Set up your Python environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+   git clone <repository-url>
+   cd gcs-mcp-server
+   python -m venv .venv
+   source .venv/bin/activate  # or `.venv\Scripts\activate` on Windows
    pip install -r requirements.txt
    ```
 
-3. Install the VS Code MCP extension (if not already installed)
+2. Configure Google Cloud authentication:
+   ```bash
+   gcloud auth application-default login
+   ```
+   This will set up your local environment to use Application Default Credentials.
 
-## Implementation Guide
+### 2. Docker Setup
 
-### 1. Basic Server Structure
+1. Build and run using Docker Compose (recommended):
+   ```bash
+   docker compose up --build
+   ```
 
-The server implementation in `src/server.py` follows this pattern:
+   This method will automatically:
+   - Build the Docker image
+   - Mount your Google Cloud credentials
+   - Set up proper environment variables
+   - Start the MCP server
 
-```python
-from mcp.server import Server, tool
+2. Manual Docker setup:
+   ```bash
+   # Build the image
+   docker build -t gcs-mcp-server .
 
-class MCPServer(Server):
-    def __init__(self):
-        super().__init__()
-        # Initialize any required clients or resources
+   # Run the container
+   docker run -v $GOOGLE_APPLICATION_CREDENTIALS:/tmp/credentials.json:ro \
+             -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/credentials.json \
+             gcs-mcp-server
+   ```
 
-    @tool("Example tool")
-    def example_tool(self, input_param: str) -> str:
-        """A simple example tool.
-        
-        Args:
-            input_param: Description of the input parameter
-            
-        Returns:
-            The result of the tool's operation
-        """
-        return f"Processed: {input_param}"
-```
+### 3. VS Code Configuration
 
-### 2. Implementing Tools
+Add the following to your VS Code settings (either User or Workspace):
 
-Tools are the primary way your MCP server extends VS Code's AI capabilities. When implementing tools:
-
-1. Use clear, descriptive names
-2. Provide detailed docstrings
-3. Define proper type hints
-4. Handle errors gracefully
-5. Return structured data when possible
-
-Example tool patterns:
-
-```python
-class MyMCPServer(Server):
-    @tool("Process file")
-    def process_file(self, file_path: str) -> dict:
-        """Process a file and return results.
-        
-        Args:
-            file_path: Path to the file to process
-            
-        Returns:
-            Dict containing processing results
-        """
-        # Implementation
-
-    @tool("Search items")
-    def search_items(self, query: str, max_results: int = 10) -> list:
-        """Search for items matching the query.
-        
-        Args:
-            query: Search query string
-            max_results: Maximum number of results to return
-            
-        Returns:
-            List of matching items
-        """
-        # Implementation
-```
-
-### 3. Error Handling
-
-Implement proper error handling for:
-- Invalid inputs
-- Resource access issues
-- External service failures
-- Timeouts
-- VS Code integration errors
-
-## VS Code Integration
-
-### 1. Local Development
-
-Configure VS Code to use your MCP server:
-
-1. Create `.vscode/mcp.json`:
 ```json
 {
-  "servers": {
-    "your-server-name": {
-      "type": "stdio",
-      "command": "python",
-      "args": ["src/server.py"]
+  "mcp": {
+    "servers": {
+      "gcs-mcp": {
+        "type": "stdio",
+        "command": "${userHome}/path/to/gcs-mcp-server/.venv/bin/python",
+        "args": ["${userHome}/path/to/gcs-mcp-server/src/server.py"]
+      }
     }
   }
 }
 ```
 
-2. Set up launch configurations in `.vscode/launch.json` for debugging
+## Available Tools
 
-### 2. Testing with VS Code
+### Bucket Operations
 
-1. Use the Command Palette to:
-   - List MCP servers
-   - Check server status
-   - Test tool invocations
+1. `list_buckets`: List all GCS buckets in the project
+2. `create_bucket`: Create a new bucket with specified configuration
+3. `delete_bucket`: Delete a bucket (with optional force flag)
 
-2. Debug integration using:
-   - VS Code's Debug Console
-   - Output channels
-   - Log files
+### Object Operations
 
-## Best Practices
+1. `get_bucket_objects`: List objects in a bucket with optional prefix/delimiter
+2. `read_object`: Read the contents of an object
+3. `upload_object`: Upload content to a new or existing object
+4. `delete_object`: Delete an object
+5. `copy_object`: Copy objects between locations
+6. `list_object_versions`: List all versions of an object
 
-### 1. Tool Design
+## Security Best Practices
 
-- Keep tools focused and atomic
-- Use clear parameter names
-- Provide good default values
-- Return structured data
-- Include proper error messages
+1. Credential Management:
+   - Use Application Default Credentials for authentication
+   - Never commit credentials to version control
+   - Support environment variables for CI/CD scenarios
 
-### 2. Performance
+2. Access Control:
+   - Validate bucket and object names
+   - Implement proper error handling
+   - Log operations securely
 
-- Implement caching where appropriate
-- Use async/await for I/O operations
-- Handle concurrent requests properly
-- Monitor resource usage
+3. Input Validation:
+   - Sanitize all file paths and object names
+   - Validate content types and sizes
+   - Handle special characters properly
 
-### 3. Security
+## Example Usage
 
-- Validate all inputs
-- Handle sensitive data properly
-- Implement proper access controls
-- Follow VS Code security guidelines
+Here are some example prompts for Copilot Chat:
 
-## Testing
+1. List buckets:
+   ```
+   List all my GCS buckets
+   ```
 
-1. Unit Tests:
-   - Test individual tools
-   - Test error handling
-   - Test edge cases
+2. Read object:
+   ```
+   Show me the contents of file.txt from my-bucket
+   ```
 
-2. Integration Tests:
-   - Test VS Code integration
-   - Test concurrent operations
-   - Test resource management
+3. Upload content:
+   ```
+   Upload this text to my-bucket/new-file.txt: Hello, World!
+   ```
 
-3. VS Code-specific Tests:
-   - Test with different workspace types
-   - Test with various VS Code settings
-   - Test extension interop
+## Troubleshooting
 
-## Deployment
+1. Credential Issues:
+   - Verify Application Default Credentials are properly configured
+   - Ensure Google Cloud CLI is installed and authenticated
+   - Check environment variable configuration
 
-### 1. Local Installation
+2. Connection Problems:
+   - Verify internet connectivity
+   - Check Google Cloud API availability
+   - Review server logs in VS Code Output panel
 
-Package your server for local installation:
-- Create proper setup files
-- Include dependencies
-- Document installation steps
-
-### 2. Distribution
-
-If distributing your server:
-- Package with pip/PyPI
-- Provide clear installation instructions
-- Include configuration examples
-- Document requirements
+3. Tool Errors:
+   - Enable debug logging for detailed error messages
+   - Verify input parameters
+   - Check access permissions
 
 ## Contributing
 
-1. Follow the code style guide
+1. Follow template-mcp-server coding standards
 2. Add tests for new features
 3. Update documentation
 4. Submit pull requests
 
 ## Additional Resources
 
-- [VS Code Extension API](https://code.visualstudio.com/api)
-- [MCP Protocol Specification](https://github.com/microsoft/model-control-protocol)
-- [Python MCP SDK Documentation](https://microsoft.github.io/model-control-protocol/python-sdk/)
+- [VS Code MCP Documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers)
+- [Google Cloud Storage Documentation](https://cloud.google.com/storage/docs)
+- [Template MCP Server Guide](../template-mcp-server/docs/mcp-server-guide.md)
+- [Model Context Protocol Specification](https://github.com/microsoft/model-control-protocol)
